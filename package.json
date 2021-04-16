@@ -1,0 +1,25 @@
+{
+  "name": "docker-pg-node",
+  "version": "1.0.0",
+  "description": "Docker/PostgreSQL/Node Tutorial",
+  "private": true,
+  "scripts": {
+    "start": "node_modules/.bin/nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sscovil/docker-pg-node.git"
+  },
+  "author": "Shaun Scovil <sscovil@gmail.com>",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/sscovil/docker-pg-node/issues"
+  },
+  "homepage": "https://github.com/sscovil/docker-pg-node#readme",
+  "devDependencies": {},
+  "dependencies": {
+    "nodemon": "2.0.3",
+    "pg": "8.0.3"
+  }
+}

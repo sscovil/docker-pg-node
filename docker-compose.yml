@@ -1,0 +1,50 @@
+version: "3.7"
+
+services:
+  database:
+    image: postgres:12.2-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tutorial
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 5s
+      retries: 10
+      timeout: 5s
+    ports:
+      - "5432:5432"
+    volumes:
+      - .:/data/db
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: node:14.16.1-alpine
+    command: ./bin/wait-for.sh database:5432 -- npm start
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - APIHOST=api
+      - APIPORT=5000
+      - PGHOST=database
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=tutorial
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5000/ping || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/home/node/app
+      - node_modules:/home/node/app/node_modules
+
+volumes:
+  node_modules:
