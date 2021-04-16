@@ -21,3 +21,5 @@ database
         server.listen(config.port);
     })
     .catch(err => console.error('Error connecting to PostgreSQL database', err.stack));
+
+module.exports = server;
