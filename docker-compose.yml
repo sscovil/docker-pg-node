@@ -5,9 +5,9 @@ services:
     image: postgres:12.2-alpine
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=tutorial
+      - POSTGRES_USER=mydbuser
+      - POSTGRES_PASSWORD=mydbpassword
+      - POSTGRES_DB=mydbname
     healthcheck:
       test: pg_isready -U postgres
       interval: 5s
@@ -27,13 +27,13 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=development
-      - APIHOST=api
-      - APIPORT=5000
-      - PGHOST=database
-      - PGPORT=5432
-      - PGUSER=postgres
-      - PGPASSWORD=postgres
-      - PGDATABASE=tutorial
+      - API_HOST=api
+      - API_PORT=5000
+      - POSTGRES_HOST=database
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=mydbuser
+      - POSTGRES_PASSWORD=mydbpassword
+      - POSTGRES_DATABASE=mydbname
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:5000/ping || exit 1
       interval: 30s
@@ -45,6 +45,16 @@ services:
     volumes:
       - .:/home/node/app
       - node_modules:/home/node/app/node_modules
+
+  pgweb:
+    image: sosedoff/pgweb
+    restart: always
+    environment:
+      - DATABASE_URL=postgres://mydbuser:mydbpassword@database:5432/mydbname?sslmode=disable
+    ports:
+      - "5001:8081"
+    links:
+      - database:database
 
 volumes:
   node_modules:

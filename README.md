@@ -61,6 +61,7 @@ This command should produce an output like this:
 --------------------------------------------------------------------------------------------------
 docker-pg-node_api_1        docker-entrypoint.sh ./bin ...   Up (healthy)   0.0.0.0:5000->5000/tcp
 docker-pg-node_database_1   docker-entrypoint.sh postgres    Up (healthy)   0.0.0.0:5432->5432/tcp
+docker-pg-node_pgweb_1      /usr/bin/pgweb --bind=0.0. ...   Up             0.0.0.0:5001->8081/tcp
 ```
 
 To view the server logs for a container, run:
@@ -83,8 +84,34 @@ If you want to delete the containers and clean up after yourself, run:
 docker-compose down --remove-orphans -v
 ```
 
+## PGWeb Database Browser
+
+One of the services included in `docker-compose.yml` is `pgweb`, a web-based database browser for
+PostgreSQL. This provides a simple way to access the database and run SQL queries.
+
+Visit http://localhost:5001/ and go to the Query tab to run some SQL.
+
+```postgresql
+CREATE TABLE people (
+    id SERIAL PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    dob DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP
+);
+
+INSERT INTO people (first_name, last_name, dob) VALUES('Shaun', 'Scovil', '1979-02-01');
+```
+
+Now click the `people` table in the left navigation menu to see data in the Rows tab. You can also
+examine the table structure in the Structure tab.
+
+![Alt text](screenshot_pgweb_01.png?raw=true "Screenshot of PGWeb UI")
+
 ## Documentation
 
 * Node.js v14.16.1 - https://nodejs.org/dist/latest-v14.x/docs/api/index.html
 * Node PostgreSQL Library - https://node-postgres.com/features/queries
+* PGWeb Database Browser - https://github.com/sosedoff/pgweb#pgweb
 * Docker Compose Commands - https://docs.docker.com/compose/reference/overview/
