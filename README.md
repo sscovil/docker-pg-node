@@ -89,23 +89,7 @@ docker-compose down --remove-orphans -v
 One of the services included in `docker-compose.yml` is `pgweb`, a web-based database browser for
 PostgreSQL. This provides a simple way to access the database and run SQL queries.
 
-Visit http://localhost:5001/ and go to the Query tab to run some SQL.
-
-```postgresql
-CREATE TABLE people (
-    id SERIAL PRIMARY KEY,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    dob DATE NOT NULL DEFAULT CURRENT_DATE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP
-);
-
-INSERT INTO people (first_name, last_name, dob) VALUES('Shaun', 'Scovil', '1979-02-01');
-```
-
-Now click the `people` table in the left navigation menu to see data in the Rows tab. You can also
-examine the table structure in the Structure tab.
+When Docker containers are running, PGWeb is available at: http://localhost:5001/
 
 ![Alt text](screenshot_pgweb_01.png?raw=true "Screenshot of PGWeb UI")
 
