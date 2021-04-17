@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
 
 class Migrations {
     /**
@@ -9,7 +10,7 @@ class Migrations {
     constructor(db, options = {}) {
         this.db = db;
         this.options = Object.assign({
-            migrationsDirectory: __dirname,
+            migrationsDirectory: path.join(process.cwd(), 'db', 'migrations'),
             tableName: 'migrations'
         }, options);
         this.isInitialized = false;
@@ -46,7 +47,7 @@ class Migrations {
         // Ensure the last migration run is in the list of migrations (if applicable); if not, something is wrong.
         let i = 0;
         if (this.lastMigration) {
-            i = this.migrationsList.findIndex(this.lastMigration)
+            i = this.migrationsList.indexOf(this.lastMigration);
             if (i === -1) {
                 console.error(`File not found in ${migrationsDirectory} for last migration run: ${this.lastMigration}`);
                 return;

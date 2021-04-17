@@ -1,7 +1,7 @@
 const { api: config } = require('./config');
 const pool = require('./database');
 const router = require('./router');
-const Migrations = require('./migrations');
+const Migrations = require('./lib/migrations');
 const http = require('http');
 
 const server = http.createServer(router);
