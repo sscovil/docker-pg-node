@@ -1,7 +1,8 @@
 const { api: config } = require('./config');
 const database = require('./database');
-const http = require('http');
 const router = require('./router');
+const Migrations = require('./migrations');
+const http = require('http');
 
 const server = http.createServer(router);
 
@@ -16,10 +17,13 @@ server.on('listening', () => {
 
 database
     .connect()
-    .then(() => {
+    .catch(err => console.error('Error connecting to PostgreSQL database', err.stack))
+    .then(async () => {
         console.log('Connected to PostgreSQL database');
+        const migrations = new Migrations(database);
+        await migrations.run();
         server.listen(config.port);
     })
-    .catch(err => console.error('Error connecting to PostgreSQL database', err.stack));
+    .catch(err => console.error('Error starting server', err.stack));
 
 module.exports = server;
