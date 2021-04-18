@@ -1,3 +1,5 @@
+const { logger } = require('./logger');
+
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
@@ -10,9 +12,11 @@ class Migrations {
     constructor(db, options = {}) {
         this.db = db;
         this.options = Object.assign({
+            logger: logger,
             migrationsDirectory: path.join(process.cwd(), 'db', 'migrations'),
             tableName: 'migrations'
         }, options);
+        this.logger = options.logger;
         this.isInitialized = false;
         this.lastMigration = false;
         this.migrationsList = [];
@@ -25,7 +29,7 @@ class Migrations {
         // Initialize the database so we can track migrations that have already been run.
         await this._init();
         if (!this.isInitialized) {
-            console.log('Unable to run database migrations');
+            this.logger.error('Unable to run database migrations');
             return;
         }
 
@@ -33,14 +37,14 @@ class Migrations {
         const { migrationsDirectory } = this.options;
         await this._getMigrationsList();
         if (!this.migrationsList.length) {
-            console.log(`No database migrations found in ${migrationsDirectory}`);
+            this.logger.info(`No database migrations found in ${migrationsDirectory}`);
             return;
         }
 
         // Query the migrations table to get the last migration run; stop here if there are no newer migrations.
         await this._getLastMigration();
         if (this.lastMigration === this.migrationsList[this.migrationsList.length - 1]) {
-            console.log('No new database migrations to run');
+            this.logger.info('No new database migrations to run');
             return;
         }
 
@@ -49,7 +53,7 @@ class Migrations {
         if (this.lastMigration) {
             i = this.migrationsList.indexOf(this.lastMigration);
             if (i === -1) {
-                console.error(`File not found in ${migrationsDirectory} for last migration run: ${this.lastMigration}`);
+                this.logger.error(`Missing migration file: ${this.lastMigration}`);
                 return;
             } else {
                 i++; // To avoid running the last migration again, we need to start with the next migration.
@@ -67,7 +71,7 @@ class Migrations {
                 await this.db.query('COMMIT'); // Commit the transaction.
             } catch(err) {
                 await this.db.query('ROLLBACK'); // Rollback the transaction.
-                console.error(`Error running database migration: ${this.migrationsList[i]}`, err.stack);
+                this.logger.error(`Error running database migration: ${this.migrationsList[i]}`, err.stack);
                 break; // Break out of the loop to avoid running any more migrations, since an error occurred.
             }
         }
@@ -86,7 +90,7 @@ class Migrations {
             );`);
             this.isInitialized = true;
         } catch(err) {
-            console.error('Error initializing database migrations', err.stack);
+            this.logger.error('Error initializing database migrations', err.stack);
         }
     }
 
@@ -100,7 +104,7 @@ class Migrations {
             const res = await this.db.query(`SELECT filename FROM ${tableName} ORDER BY created_at DESC LIMIT 1;`);
             this.lastMigration = res.rows && res.rows.length && res.rows[0].filename || false;
         } catch(err) {
-            console.error('Error getting last migration', err.stack);
+            this.logger.error('Error getting last migration', err.stack);
         }
     }
 
@@ -115,7 +119,7 @@ class Migrations {
         try {
             await this.db.query(`INSERT INTO ${tableName} (filename) VALUES ('${lastMigration}');`);
         } catch(err) {
-            console.error(`Error setting last migration: ${lastMigration}`, err.stack);
+            this.logger.error(`Error setting last migration: ${lastMigration}`, err.stack);
         }
     }
 
@@ -130,7 +134,7 @@ class Migrations {
             const sqlFilesList = filesList.filter(filename => filename.match(/\.sql$/i, ) !== null);
             this.migrationsList = sqlFilesList.sort();
         } catch(err) {
-            console.error('Error getting migrations list', err.stack);
+            this.logger.error('Error getting migrations list', err.stack);
         }
     }
 }

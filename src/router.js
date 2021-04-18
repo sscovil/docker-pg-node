@@ -1,11 +1,10 @@
-module.exports = (req, res) => {
-    const { method, url } = req;
+const { httpLogger: logger } = require('./lib/logger');
 
-    console.log(`${method} ${url}`);
-
+const router = (req, res) => {
+    logger(req, res);
     res.setHeader('Content-Type', 'application/json');
 
-    switch (url) {
+    switch (req.url) {
         case '/ping':
             res.writeHead(200);
             return res.end(JSON.stringify({
@@ -19,3 +18,5 @@ module.exports = (req, res) => {
             }));
     }
 };
+
+module.exports = router;

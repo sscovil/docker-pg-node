@@ -20,6 +20,8 @@
   "devDependencies": {},
   "dependencies": {
     "nodemon": "2.0.3",
-    "pg": "8.0.3"
+    "pg": "8.0.3",
+    "pino": "6.11.3",
+    "pino-http": "5.5.0"
   }
 }

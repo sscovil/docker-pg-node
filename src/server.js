@@ -1,4 +1,5 @@
 const { api: config } = require('./config');
+const { logger } = require('./lib/logger');
 const pool = require('./database');
 const router = require('./router');
 const Migrations = require('./lib/migrations');
@@ -9,21 +10,42 @@ const cluster = require("cluster")
 
 async function createCluster() {
     const cpuCount = os.cpus().length;
+    const shouldConnectDB = cpuCount === 1 || cluster.isMaster;
+    const shouldCreateCluster = cpuCount > 1 && cluster.isMaster;
+    const shouldStartServer = cpuCount === 1 || cluster.isWorker;
 
-    if (cpuCount > 1) {
-        if (cluster.isMaster) {
-            for (let i = 0; i < cpuCount; i++) {
-                cluster.fork();
-            }
-            cluster.on('exit', worker => {
-                console.log(`Worker ${worker.id} has exited`);
-            });
-        } else {
-            await createServer();
+    if (shouldConnectDB) {
+        const db = await createDBConnectionPool();
+        if (db) {
+            await runDBMigrations(db);
         }
-    } else {
-        await createServer();
     }
+
+    if (shouldCreateCluster) {
+        for (let i = 0; i < cpuCount; i++) {
+            cluster.fork();
+        }
+        cluster.on('exit', worker => {
+            logger.info(`Worker ${worker.id} has exited`);
+        });
+
+        return cluster;
+    }
+
+    if (shouldStartServer) {
+        return await createServer();
+    }
+}
+
+async function createDBConnectionPool() {
+    try {
+        const db = await pool.connect();
+        logger.info('Created connection pool for PostgreSQL database');
+        return db;
+    } catch(err) {
+        logger.error('Error creating connection pool for PostgreSQL database', err.stack);
+    }
+    return false;
 }
 
 async function createServer() {
@@ -35,25 +57,29 @@ async function createServer() {
 
     server.on('listening', () => {
         const { host, port } = config;
-        console.log(`Server listening at http://${host}:${port} on process ${process.pid}`);
+        logger.info(`Server listening at http://${host}:${port} on process ${process.pid}`);
     });
 
     try {
         server.listen(config.port);
     } catch(err) {
-        console.error('Error starting server', err.stack);
+        logger.error('Error starting server', err.stack);
     }
 
     return server;
 }
 
-if (require.main === module) {
-    (async () => {
-        // TODO: Create a database connection client for migrations, and a connection pool for the router.
-        const db = await pool.connect();
-        console.log('Created connection pool for PostgreSQL database');
+async function runDBMigrations(db) {
+    try {
         const migrations = new Migrations(db);
         await migrations.run();
+    } catch(err) {
+        logger.error('Error setting up database', err.stack);
+    }
+}
+
+if (require.main === module) {
+    (async () => {
         await createCluster();
     })().catch(err => {
         console.error('Error starting server cluster', err.stack);
