@@ -29,6 +29,7 @@ services:
       - NODE_ENV=development
       - API_HOST=api
       - API_PORT=5000
+      - CRYPTO_SALT=insecure-do-not-use-in-production
       - POSTGRES_HOST=database
       - POSTGRES_PORT=5432
       - POSTGRES_USER=mydbuser

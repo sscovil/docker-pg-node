@@ -1,6 +1,6 @@
 const { api: config } = require('./config');
 const { logger } = require('./lib/logger');
-const pool = require('./database');
+const db = require('./database');
 const router = require('./router');
 const Migrations = require('./lib/migrations');
 
@@ -15,10 +15,8 @@ async function createCluster() {
     const shouldStartServer = cpuCount === 1 || cluster.isWorker;
 
     if (shouldConnectDB) {
-        const db = await createDBConnectionPool();
-        if (db) {
-            await runDBMigrations(db);
-        }
+        await createDBConnectionPool();
+        await runDBMigrations();
     }
 
     if (shouldCreateCluster) {
@@ -39,11 +37,10 @@ async function createCluster() {
 
 async function createDBConnectionPool() {
     try {
-        const db = await pool.connect();
+        await db.connect();
         logger.info('Created connection pool for PostgreSQL database');
-        return db;
     } catch(err) {
-        logger.error('Error creating connection pool for PostgreSQL database', err.stack);
+        logger.error(err, 'Error creating connection pool for PostgreSQL database');
     }
     return false;
 }
@@ -63,18 +60,18 @@ async function createServer() {
     try {
         server.listen(config.port);
     } catch(err) {
-        logger.error('Error starting server', err.stack);
+        logger.error(err, 'Error starting server');
     }
 
     return server;
 }
 
-async function runDBMigrations(db) {
+async function runDBMigrations() {
     try {
         const migrations = new Migrations(db);
         await migrations.run();
     } catch(err) {
-        logger.error('Error setting up database', err.stack);
+        logger.error(err, 'Error setting up database');
     }
 }
 
@@ -82,6 +79,6 @@ if (require.main === module) {
     (async () => {
         await createCluster();
     })().catch(err => {
-        console.error('Error starting server cluster', err.stack);
+        console.error(err, 'Error starting server cluster');
     });
 }

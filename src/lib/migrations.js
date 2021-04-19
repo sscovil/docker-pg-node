@@ -2,11 +2,10 @@ const { logger } = require('./logger');
 
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
 
 class Migrations {
     /**
-     * @param db {Pool} PostgreSQL database connection pool.
+     * @param db {PG.Pool} PostgreSQL database connection pool.
      * @param options {Object} Options to change default behavior.
      */
     constructor(db, options = {}) {
@@ -16,7 +15,7 @@ class Migrations {
             migrationsDirectory: path.join(process.cwd(), 'db', 'migrations'),
             tableName: 'migrations'
         }, options);
-        this.logger = options.logger;
+        this.logger = this.options.logger;
         this.isInitialized = false;
         this.lastMigration = false;
         this.migrationsList = [];
@@ -62,16 +61,18 @@ class Migrations {
 
         // Loop through all of the new migrations (if applicable) and run the SQL in a transaction.
         for (i; i < this.migrationsList.length; i++) {
+            const tx = await this.db.tx(); // Create a database transaction to ensure transactional integrity.
+
             try {
                 const migration = path.join(migrationsDirectory, this.migrationsList[i]);
                 const text = await fs.promises.readFile(migration, { encoding: 'utf8' });
-                await this.db.query('BEGIN'); // Begin the transaction.
-                await this.db.query(text);
-                await this._setLastMigration(this.migrationsList[i]); // Update the migrations table accordingly.
-                await this.db.query('COMMIT'); // Commit the transaction.
+                await tx.begin(); // Begin the transaction.
+                await tx.query(text);
+                await this._setLastMigration(this.migrationsList[i], tx); // Update the migrations table accordingly.
+                await tx.commit(); // Commit the transaction if migration runs and migrations table is updated.
             } catch(err) {
-                await this.db.query('ROLLBACK'); // Rollback the transaction.
-                this.logger.error(`Error running database migration: ${this.migrationsList[i]}`, err.stack);
+                await tx.rollback(); // Rollback the transaction if anything goes wrong.
+                this.logger.error(err, `Error running database migration: ${this.migrationsList[i]}`);
                 break; // Break out of the loop to avoid running any more migrations, since an error occurred.
             }
         }
@@ -90,7 +91,7 @@ class Migrations {
             );`);
             this.isInitialized = true;
         } catch(err) {
-            this.logger.error('Error initializing database migrations', err.stack);
+            this.logger.error(err, 'Error initializing database migrations');
         }
     }
 
@@ -104,22 +105,23 @@ class Migrations {
             const res = await this.db.query(`SELECT filename FROM ${tableName} ORDER BY created_at DESC LIMIT 1;`);
             this.lastMigration = res.rows && res.rows.length && res.rows[0].filename || false;
         } catch(err) {
-            this.logger.error('Error getting last migration', err.stack);
+            this.logger.error(err, 'Error getting last migration');
         }
     }
 
     /**
      * @private
-     * @param lastMigration
+     * @param lastMigration {string}
+     * @param tx {Client}
      * @returns {Promise<void>}
      */
-    async _setLastMigration(lastMigration) {
+    async _setLastMigration(lastMigration, tx) {
         const { tableName } = this.options;
         this.lastMigration = lastMigration;
         try {
-            await this.db.query(`INSERT INTO ${tableName} (filename) VALUES ('${lastMigration}');`);
+            await tx.query(`INSERT INTO ${tableName} (filename) VALUES ('${lastMigration}');`);
         } catch(err) {
-            this.logger.error(`Error setting last migration: ${lastMigration}`, err.stack);
+            this.logger.error(err, `Error setting last migration: ${lastMigration}`);
         }
     }
 
@@ -134,7 +136,7 @@ class Migrations {
             const sqlFilesList = filesList.filter(filename => filename.match(/\.sql$/i, ) !== null);
             this.migrationsList = sqlFilesList.sort();
         } catch(err) {
-            this.logger.error('Error getting migrations list', err.stack);
+            this.logger.error(err, 'Error getting migrations list');
         }
     }
 }

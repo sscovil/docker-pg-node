@@ -3,6 +3,9 @@ module.exports = {
         host: process.env.API_HOST,
         port: process.env.API_PORT
     },
+    crypto: {
+        salt: process.env.CRYPTO_SALT
+    },
     database: {
         host: process.env.POSTGRES_HOST,
         port: process.env.POSTGRES_PORT,
